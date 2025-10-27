@@ -40,7 +40,7 @@ function App() {
         throw new Error(errorText || 'Failed to submit feedback');
       }
 
-      const data = await response.json();
+      await response.json();
       setStatus({ 
         type: 'success', 
         message: 'Thank you for your feedback! We appreciate your input.' 
