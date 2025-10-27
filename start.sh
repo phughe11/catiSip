@@ -65,7 +65,8 @@ cd ..
 # Wait for backend to be ready
 echo "Waiting for backend to be ready..."
 sleep 2
-if curl -s http://localhost:8080/api/health > /dev/null; then
+BACKEND_PORT=${PORT:-8080}
+if curl -s http://localhost:$BACKEND_PORT/api/health > /dev/null; then
     echo -e "${GREEN}✓ Backend is healthy${NC}"
 else
     echo -e "${YELLOW}⚠ Backend health check failed, but continuing...${NC}"
@@ -96,7 +97,7 @@ echo "====================================="
 echo ""
 echo "Services:"
 echo "  • Frontend: http://localhost:3000"
-echo "  • Backend API: http://localhost:8080"
+echo "  • Backend API: http://localhost:${PORT:-8080}"
 echo ""
 echo "Logs:"
 echo "  • Backend: tail -f backend.log"
