@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  # FreeSWITCH 服务 / FreeSWITCH service
+  freeswitch:
+    image: freeswitch/freeswitch:latest
+    container_name: catiSip-freeswitch
+    ports:
+      - "5060:5060/udp"  # SIP
+      - "5060:5060/tcp"  # SIP
+      - "8021:8021"      # ESL
+      - "16384-16394:16384-16394/udp"  # RTP
+    networks:
+      - catiSip-network
+    restart: unless-stopped
+
+  # Go 后端服务 / Go backend service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: catiSip-backend
+    environment:
+      - SIP_HOST=freeswitch
+      - SIP_PORT=5060
+      - SIP_USERNAME=1000
+      - SIP_PASSWORD=1234
+      - SIP_DOMAIN=localhost
+      - PORT=8080
+    ports:
+      - "8080:8080"
+    depends_on:
+      - freeswitch
+    networks:
+      - catiSip-network
+    restart: unless-stopped
+
+  # React 前端服务 / React frontend service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: catiSip-frontend
+    environment:
+      - REACT_APP_API_URL=http://localhost:8080
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - catiSip-network
+    restart: unless-stopped
+
+networks:
+  catiSip-network:
+    driver: bridge

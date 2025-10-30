@@ -1,0 +1,30 @@
+# Backend binary
+backend/catiSip
+backend/backend
+
+# Frontend build
+frontend/build/
+frontend/node_modules/
+
+# Environment files
+.env
+.env.local
+.env.production
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# PID files
+*.pid
+
+# Temp files
+*.tmp
+*.swp
