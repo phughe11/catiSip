@@ -4,189 +4,138 @@ import './App.css';
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
 
 function App() {
-  const [extensions, setExtensions] = useState([]);
-  const [calls, setCalls] = useState([]);
-  const [fromExtension, setFromExtension] = useState('1000');
-  const [toNumber, setToNumber] = useState('');
-  const [status, setStatus] = useState('');
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    message: '',
+    rating: 5
+  });
+  const [status, setStatus] = useState({ type: '', message: '' });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetchExtensions();
-    const interval = setInterval(fetchExtensions, 5000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchExtensions = async () => {
-    try {
-      const response = await fetch(`${API_URL}/api/extensions`);
-      const data = await response.json();
-      setExtensions(data);
-    } catch (error) {
-      console.error('Failed to fetch extensions:', error);
-    }
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: name === 'rating' ? parseInt(value, 10) : value
+    }));
   };
 
-  const makeCall = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setStatus('Initiating call...');
+    setIsSubmitting(true);
+    setStatus({ type: '', message: '' });
 
     try {
-      const response = await fetch(`${API_URL}/api/call/make`, {
+      const response = await fetch(`${API_URL}/api/feedback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          from: fromExtension,
-          to: toNumber,
-        }),
+        body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
-      setCalls([...calls, data]);
-      setStatus(`Call initiated: ${data.id}`);
-      setToNumber('');
-
-      // Monitor call status
-      monitorCall(data.id);
-    } catch (error) {
-      setStatus(`Error: ${error.message}`);
-      console.error('Failed to make call:', error);
-    }
-  };
-
-  const monitorCall = async (callId) => {
-    const checkStatus = async () => {
-      try {
-        const response = await fetch(`${API_URL}/api/call/status?call_id=${callId}`);
-        const data = await response.json();
-        
-        setCalls(prevCalls =>
-          prevCalls.map(call =>
-            call.id === callId ? data : call
-          )
-        );
-
-        if (data.status !== 'ended') {
-          setTimeout(checkStatus, 2000);
-        }
-      } catch (error) {
-        console.error('Failed to check call status:', error);
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to submit feedback');
       }
-    };
 
-    setTimeout(checkStatus, 2000);
-  };
-
-  const hangupCall = async (callId) => {
-    try {
-      await fetch(`${API_URL}/api/call/hangup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          call_id: callId,
-        }),
+      await response.json();
+      setStatus({ 
+        type: 'success', 
+        message: 'Thank you for your feedback! We appreciate your input.' 
       });
-
-      setStatus(`Call ${callId} ended`);
+      setFormData({ name: '', email: '', message: '', rating: 5 });
     } catch (error) {
-      setStatus(`Error: ${error.message}`);
-      console.error('Failed to hangup call:', error);
+      setStatus({ 
+        type: 'error', 
+        message: error.message || 'Failed to submit feedback. Please try again.' 
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="App">
-      <header className="App-header">
-        <h1>CatiSip - SIP Call Manager</h1>
-        <p className="subtitle">FreeSWITCH Integration</p>
-      </header>
-
-      <div className="container">
-        <div className="panel">
-          <h2>Available Extensions</h2>
-          <div className="extensions-list">
-            {extensions.map((ext, idx) => (
-              <div key={idx} className="extension-item">
-                <span className="extension-number">{ext.extension}</span>
-                <span className={`status ${ext.status}`}>{ext.status}</span>
-              </div>
-            ))}
+      <div className="feedback-container">
+        <h1>User Feedback</h1>
+        <p className="subtitle">We'd love to hear from you!</p>
+        
+        <form onSubmit={handleSubmit} className="feedback-form">
+          <div className="form-group">
+            <label htmlFor="name">Name *</label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              placeholder="Enter your name"
+            />
           </div>
-        </div>
 
-        <div className="panel">
-          <h2>Make a Call</h2>
-          <form onSubmit={makeCall} className="call-form">
-            <div className="form-group">
-              <label>From Extension:</label>
-              <select
-                value={fromExtension}
-                onChange={(e) => setFromExtension(e.target.value)}
-                className="form-control"
-              >
-                {extensions.map((ext, idx) => (
-                  <option key={idx} value={ext.extension}>
-                    {ext.extension}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className="form-group">
-              <label>To Number:</label>
-              <input
-                type="text"
-                value={toNumber}
-                onChange={(e) => setToNumber(e.target.value)}
-                placeholder="Enter phone number or extension"
-                className="form-control"
-                required
-              />
-            </div>
-
-            <button type="submit" className="btn btn-primary">
-              Make Call
-            </button>
-          </form>
-
-          {status && <div className="status-message">{status}</div>}
-        </div>
-
-        <div className="panel">
-          <h2>Active Calls</h2>
-          <div className="calls-list">
-            {calls.length === 0 ? (
-              <p className="no-calls">No active calls</p>
-            ) : (
-              calls.map((call) => (
-                <div key={call.id} className="call-item">
-                  <div className="call-info">
-                    <div className="call-direction">
-                      {call.from} → {call.to}
-                    </div>
-                    <div className="call-meta">
-                      <span className={`call-status status-${call.status}`}>
-                        {call.status}
-                      </span>
-                      <span className="call-id">{call.id}</span>
-                    </div>
-                  </div>
-                  {call.status !== 'ended' && (
-                    <button
-                      onClick={() => hangupCall(call.id)}
-                      className="btn btn-danger"
-                    >
-                      Hangup
-                    </button>
-                  )}
-                </div>
-              ))
-            )}
+          <div className="form-group">
+            <label htmlFor="email">Email *</label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              placeholder="Enter your email"
+            />
           </div>
-        </div>
+
+          <div className="form-group">
+            <label htmlFor="rating">Rating *</label>
+            <div className="rating-container">
+              {[1, 2, 3, 4, 5].map((star) => (
+                <label key={star} className="star-label">
+                  <input
+                    type="radio"
+                    name="rating"
+                    value={star}
+                    checked={formData.rating === star}
+                    onChange={handleChange}
+                  />
+                  <span className={`star ${formData.rating >= star ? 'filled' : ''}`}>
+                    ★
+                  </span>
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="message">Message *</label>
+            <textarea
+              id="message"
+              name="message"
+              value={formData.message}
+              onChange={handleChange}
+              required
+              rows="5"
+              placeholder="Share your feedback..."
+            />
+          </div>
+
+          {status.message && (
+            <div className={`status-message ${status.type}`}>
+              {status.message}
+            </div>
+          )}
+
+          <button 
+            type="submit" 
+            className="submit-button"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? 'Submitting...' : 'Submit Feedback'}
+          </button>
+        </form>
       </div>
     </div>
   );

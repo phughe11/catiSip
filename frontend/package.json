@@ -1,10 +1,10 @@
 {
-  "name": "frontend",
+  "name": "feedback-frontend",
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-scripts": "5.0.1"
   },
   "scripts": {
@@ -14,7 +14,9 @@
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
-    "extends": "react-app"
+    "extends": [
+      "react-app"
+    ]
   },
   "browserslist": {
     "production": [
